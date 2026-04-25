@@ -1,14 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { CatalogFilter, ViewMode } from '../domain/types'
 import { buildCatalogIndex } from '../domain/hmathCatalog'
 import { expandByEdgeHops, searchTopicsInBase, type SearchMatchMode } from '../domain/searchUtils'
-import type { TopicQuestionIndex } from '../domain/paperAnalysis'
 import { CatalogSidebar } from './components/CatalogSidebar'
 import { GraphInspector, type InspectorState } from './components/GraphInspector'
-import { PaperUploadPanel } from './components/PaperUploadPanel'
 import { VizCanvas } from './components/VizCanvas'
 import { useCatalogStore } from './state/catalogStore'
-import { usePaperLibrary } from './state/paperLibrary'
 
 function describeSearchStrategy(mode: SearchMatchMode): string {
   if (mode === 'AND') return '分词全匹配'
@@ -30,19 +27,9 @@ export function EduVizApp() {
   const [mode, setMode] = useState<ViewMode>('RADIAL_LINKS')
   const [filter, setFilter] = useState<CatalogFilter>(defaultFilter)
   const [inspector, setInspector] = useState<InspectorState | null>(null)
-  const [paperCounts, setPaperCounts] = useState<Record<string, number>>({})
-  const [topicQuestions, setTopicQuestions] = useState<TopicQuestionIndex>({})
 
   const store = useCatalogStore()
-  const paperLib = usePaperLibrary()
   const index = useMemo(() => buildCatalogIndex(store.catalog), [store.catalog])
-
-  const onApplyCounts = useCallback((c: Record<string, number>) => {
-    setPaperCounts(c)
-  }, [])
-  const onApplyTopicQuestions = useCallback((tq: TopicQuestionIndex) => {
-    setTopicQuestions(tq)
-  }, [])
 
   const { displayNodes, focusIds, searchAssist } = useMemo(() => {
     const q = filter.query.trim().toLowerCase()
@@ -112,28 +99,9 @@ export function EduVizApp() {
             <section className="mission-card" aria-label="使用目标">
               <div className="mission-card-title">目标：专升本数学满分路径</div>
               <p className="mission-card-text">
-                左侧导入 PDF/DOCX 真题 → 自动切题并映射到图谱考点 → 图中青色标记为「卷面已出现」的考点；未标记处优先补漏。
-                扫描版 PDF 需可搜索文字（或后续接 OCR）；解析规则为启发式，重要卷面请以人工复核为准。
+                用全量考点关系做「降维」：搜索命中会高亮并展开邻居；可在右侧多视图之间切换。
               </p>
             </section>
-
-            <PaperUploadPanel
-              index={index}
-              onApplyCounts={onApplyCounts}
-              onApplyTopicQuestions={onApplyTopicQuestions}
-              lib={{
-                items: paperLib.items,
-                selectedIds: paperLib.selectedIds,
-                selected: paperLib.selected,
-                refresh: paperLib.refresh,
-                upload: paperLib.upload,
-                saveAnalysis: paperLib.saveAnalysis,
-                loadAnalysis: paperLib.loadAnalysis,
-                rename: paperLib.rename,
-                remove: paperLib.remove,
-                toggleSelect: paperLib.toggleSelect,
-              }}
-            />
 
             <div className="hr" />
 
@@ -146,11 +114,6 @@ export function EduVizApp() {
               index={index}
               onOpenCreateNode={() => setInspector({ type: 'create' })}
               searchAssist={searchAssist}
-              paperItems={paperLib.items}
-              paperSelected={paperLib.selected}
-              onTogglePaper={(id) => paperLib.toggleSelect(id)}
-              onSelectAllPapers={() => paperLib.setSelection(paperLib.items.map((p) => p.id))}
-              onClearPapers={() => paperLib.setSelection([])}
             />
 
             <GraphInspector
@@ -159,8 +122,6 @@ export function EduVizApp() {
               onClose={() => setInspector(null)}
               index={index}
               store={store}
-              paperCounts={paperCounts}
-              topicQuestions={topicQuestions}
             />
           </div>
         </div>
@@ -173,8 +134,6 @@ export function EduVizApp() {
           filteredNodes={displayNodes}
           focusIds={focusIds}
           store={store}
-          paperCounts={paperCounts}
-          topicQuestions={topicQuestions}
         />
       </div>
     </div>

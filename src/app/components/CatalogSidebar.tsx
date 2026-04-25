@@ -1,7 +1,5 @@
 import type { CatalogFilter, CatalogIndex, ChapterScope, CognitiveLevel, ViewMode } from '../../domain/types'
 import type { DivergentSearchInsight } from '../../domain/divergentSearch'
-import type { PaperListItem } from '../state/paperLibrary'
-
 type Props = {
   mode: ViewMode
   setMode: (m: ViewMode) => void
@@ -14,12 +12,6 @@ type Props = {
   searchAssist?: { label: string; matched: number; visible: number; expandHops?: number }
   /** 多概念联合检索时的关联解读 */
   divergentInsight?: DivergentSearchInsight
-  /** 真题文件夹维度（与章节区分） */
-  paperItems?: PaperListItem[]
-  paperSelected?: Set<string>
-  onTogglePaper?: (paperId: string) => void
-  onSelectAllPapers?: () => void
-  onClearPapers?: () => void
 }
 
 const modeLabel: Record<ViewMode, string> = {
@@ -56,11 +48,6 @@ export function CatalogSidebar({
   onOpenCreateNode,
   searchAssist,
   divergentInsight,
-  paperItems = [],
-  paperSelected = new Set(),
-  onTogglePaper,
-  onSelectAllPapers,
-  onClearPapers,
 }: Props) {
   const scope = filter.chapterScope
   const allChapters = index.chapters
@@ -80,48 +67,6 @@ export function CatalogSidebar({
             {modeLabel[m]}
           </button>
         ))}
-      </div>
-
-      <div className="control">
-        <label>内容维度（真题文件夹，可多选叠加）</label>
-        <div className="chapter-toolbar">
-          <span className="chapter-hint">
-            {paperSelected.size === 0 ? '当前：未选择文件夹' : `已选 ${paperSelected.size} 个`}
-          </span>
-          <div className="chapter-toolbar-btns">
-            <button type="button" className="touch-btn touch-btn-tiny" onClick={() => onSelectAllPapers?.()}>
-              全选
-            </button>
-            <button type="button" className="touch-btn touch-btn-tiny" onClick={() => onClearPapers?.()}>
-              清空
-            </button>
-          </div>
-        </div>
-        <div className="paper-grid" role="group" aria-label="真题文件夹多选">
-          {paperItems.length === 0 ? (
-            <div className="subtitle">尚未导入真题文件夹。</div>
-          ) : (
-            paperItems.map((p) => {
-              const name = p.meta?.displayName ?? p.id
-              const active = paperSelected.has(p.id)
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`paper-chip ${active ? 'paper-chip-on' : 'paper-chip-off'}`}
-                  aria-pressed={active}
-                  title={p.meta?.originalName}
-                  onClick={() => onTogglePaper?.(p.id)}
-                >
-                  {name}
-                </button>
-              )
-            })
-          )}
-        </div>
-        <div className="subtitle" style={{ marginTop: 8 }}>
-          输入文件夹名到搜索框，会自动选中对应文件夹并展示其题目覆盖的考点与关联。
-        </div>
       </div>
 
       <div className="kpi">
