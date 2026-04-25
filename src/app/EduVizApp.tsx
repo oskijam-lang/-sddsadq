@@ -27,7 +27,7 @@ const defaultFilter: CatalogFilter = {
 }
 
 export function EduVizApp() {
-  const [mode, setMode] = useState<ViewMode>('RADIAL_TREE')
+  const [mode, setMode] = useState<ViewMode>('RADIAL_LINKS')
   const [filter, setFilter] = useState<CatalogFilter>(defaultFilter)
   const [inspector, setInspector] = useState<InspectorState | null>(null)
   const [paperCounts, setPaperCounts] = useState<Record<string, number>>({})

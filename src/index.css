@@ -449,6 +449,90 @@ h3 {
   background: var(--elev);
 }
 
+/* —— 悬浮小框（鼠标停留不消失） —— */
+.hover-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  padding: 0.7rem 0.8rem;
+  backdrop-filter: blur(10px);
+}
+
+.hover-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-h);
+  line-height: 1.25;
+}
+.hover-sub {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  word-break: break-word;
+}
+.hover-meta {
+  margin-top: 0.35rem;
+  font-size: 0.74rem;
+  color: #334155;
+}
+.hover-kpi {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.1);
+  font-size: 0.78rem;
+  color: #0f172a;
+}
+.hover-kpi-sub {
+  margin-left: 0.35rem;
+  color: #64748b;
+  font-weight: 500;
+}
+.hover-refs {
+  margin-top: 0.55rem;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 2px;
+}
+.hover-ref {
+  padding: 0.45rem 0.45rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.85);
+}
+.hover-ref + .hover-ref {
+  margin-top: 0.45rem;
+}
+.hover-ref-head {
+  display: flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  color: #0f172a;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+.hover-ref-qid {
+  color: #64748b;
+  font-weight: 600;
+}
+.hover-ref-snippet {
+  margin-top: 0.3rem;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #334155;
+  white-space: pre-wrap;
+}
+.hover-more {
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.hover-empty {
+  margin-top: 0.55rem;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
 .divergent-panel-title {
   font-size: 0.78rem;
   font-weight: 650;

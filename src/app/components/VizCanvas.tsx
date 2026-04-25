@@ -18,21 +18,20 @@ import { buildExamAxes, buildExamChapters, buildExamTopicLabels } from '../../do
 import type { TopicQuestionIndex } from '../../domain/paperAnalysis'
 import { buildPrimitiveChordMatrix, PRIMITIVE_AXES } from '../../domain/firstPrinciples'
 import {
-  buildRadialTree,
   subgraph,
   toEChartsGraph,
   toSankeyFirstPrinciples,
 } from '../../viz/graphTransforms'
-import { decorateTreePaperHits } from '../../viz/decorateTreePaperHits'
 import { thinEdges } from '../../viz/thinGraph'
 import { ChordView } from '../views/ChordView'
 import { ExamHeatmapView } from '../views/ExamHeatmapView'
 import { ForceGraphView } from '../views/ForceGraphView'
-import { RadialTreeView } from '../views/RadialTreeView'
 import { RadialLinksView } from '../views/RadialLinksView'
 import { SankeyView } from '../views/SankeyView'
 import type { CatalogMutations } from '../state/catalogStore'
 import { buildPaperHeatmap } from '../../domain/paperHeatmap'
+import { GraphHoverTooltip } from './GraphHoverTooltip'
+import { EXAM_FOCUS_TERMS } from '../../domain/examFocusTerms'
 
 type Props = {
   mode: ViewMode
@@ -213,10 +212,16 @@ export function VizCanvas({
     return buildPaperHeatmap(index, topicQuestions)
   }, [index, paperHighlightMode, topicQuestions])
 
-  const radialTreeData = useMemo(() => {
-    const t = buildRadialTree(index, nodes)
-    return decorateTreePaperHits(t, paperCounts, { dimUnmatched: paperHighlightMode })
-  }, [index, nodes, paperCounts, paperHighlightMode])
+  const redFocusIds = useMemo(() => {
+    const terms = EXAM_FOCUS_TERMS.map((t) => t.trim()).filter(Boolean)
+    if (terms.length === 0) return new Set<string>()
+    const out = new Set<string>()
+    for (const n of index.nodes) {
+      const hay = `${n.label} ${(n.tags ?? []).join(' ')} ${(n.alias ?? []).join(' ')}`.toLowerCase()
+      if (terms.some((t) => hay.includes(t.toLowerCase()))) out.add(n.id)
+    }
+    return out
+  }, [index.nodes])
 
   const [resetKey, setResetKey] = useState(0)
   const [rotDeg, setRotDeg] = useState(0)
@@ -224,6 +229,9 @@ export function VizCanvas({
   const [perfMode, setPerfMode] = useState(true)
   const [selectedEdge, setSelectedEdge] = useState<TopicEdge | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [hover, setHover] = useState<{ type: 'node'; id: string } | { type: 'edge'; edge: TopicEdge } | null>(null)
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
+  const [hoverHold, setHoverHold] = useState(false)
   const [showCreateNode, setShowCreateNode] = useState(false)
   const chartAreaRef = useRef<HTMLDivElement | null>(null)
 
@@ -250,8 +258,23 @@ export function VizCanvas({
     setPerfMode(true)
     setSelectedEdge(null)
     setSelectedNodeId(null)
+    setHover(null)
+    setHoverPos(null)
+    setHoverHold(false)
     setShowCreateNode(false)
   }, [mode])
+
+  const requestShowHoverNode = (id: string | null, pos?: { x: number; y: number }) => {
+    if (!id) {
+      if (!hoverHold) {
+        setHover(null)
+        setHoverPos(null)
+      }
+      return
+    }
+    setHover({ type: 'node', id })
+    if (pos) setHoverPos(pos)
+  }
 
   const edgesThin = useMemo(() => {
     if (!perfMode) return edges
@@ -508,16 +531,6 @@ export function VizCanvas({
   }, [index.chapters, showCreateNode, store])
 
   const content = useMemo(() => {
-    if (mode === 'RADIAL_TREE') {
-      return (
-        <RadialTreeView
-          key={resetKey}
-          tree={radialTreeData}
-          paperCounts={paperCounts}
-          topicQuestions={topicQuestions}
-        />
-      )
-    }
     if (mode === 'RADIAL_LINKS') {
       const chapters = index.chapters
       return (
@@ -530,8 +543,11 @@ export function VizCanvas({
           rotDeg={rotDeg}
           graphFocus={mergedGraphFocus}
           paperCounts={paperCounts}
+          topicQuestions={topicQuestions}
+          redFocusIds={redFocusIds}
           onSelectEdge={(ed) => setSelectedEdge(ed)}
           onSelectNode={(id) => setSelectedNodeId(id)}
+          onHoverNode={requestShowHoverNode}
         />
       )
     }
@@ -544,6 +560,7 @@ export function VizCanvas({
           focusIds={focusIds}
           paperCounts={paperCounts}
           topicQuestions={topicQuestions}
+          redFocusIds={redFocusIds}
           paperCoverageActive={paperHighlightMode}
           stableMode={perfMode}
           onSelectEdge={(ed) => setSelectedEdge(ed)}
@@ -611,7 +628,6 @@ export function VizCanvas({
     paperHeatmap,
     paperHighlightMode,
     perfMode,
-    radialTreeData,
     resetKey,
     reverse,
     rotDeg,
@@ -666,6 +682,21 @@ export function VizCanvas({
         </span>
       </div>
       {edgeEditor ?? nodeEditor ?? createNodePanel}
+      {!edgeEditor && !nodeEditor && !createNodePanel && (
+        <GraphHoverTooltip
+          hover={hover}
+          pos={hoverPos}
+          index={index}
+          paperCounts={paperCounts}
+          topicQuestions={topicQuestions}
+          onMouseEnter={() => setHoverHold(true)}
+          onMouseLeave={() => {
+            setHoverHold(false)
+            setHover(null)
+            setHoverPos(null)
+          }}
+        />
+      )}
       <div ref={chartAreaRef} className="canvas-chart">
         {content}
       </div>

@@ -9,6 +9,8 @@ type Props = {
   /** 已选真题：考点 id → 命中题数 */
   paperCounts?: Record<string, number>
   topicQuestions?: TopicQuestionIndex
+  /** 红色重点命中：考点 id 集合 */
+  redFocusIds?: Set<string>
   /** 有真题数据时弱化未命中节点 */
   paperCoverageActive?: boolean
   /** 性能/稳定模式：减少动态与布局漂移 */
@@ -38,6 +40,7 @@ export function ForceGraphView({
   focusIds = [],
   paperCounts = {},
   topicQuestions = {},
+  redFocusIds,
   paperCoverageActive = true,
   stableMode = false,
   onSelectEdge,
@@ -57,10 +60,17 @@ export function ForceGraphView({
     const nodes2 = graph.nodes.map((n) => {
       const focused = focus.size === 0 || focus.has(n.id)
       const hit = paperCounts[n.id] ?? 0
+      const red = redFocusIds?.has(n.id) ?? false
       const dimUnhit = cov && hit === 0 && focused
       const itemStyle: Record<string, unknown> = {}
       if (!focused) itemStyle.opacity = 0.18
       else if (dimUnhit) itemStyle.opacity = 0.4
+      if (red) {
+        itemStyle.borderColor = 'rgba(239, 68, 68, 0.95)'
+        itemStyle.borderWidth = 3.2
+        itemStyle.shadowBlur = 14
+        itemStyle.shadowColor = 'rgba(239, 68, 68, 0.22)'
+      }
       if (hit > 0) {
         itemStyle.borderColor = 'rgba(6, 182, 212, 0.98)'
         itemStyle.borderWidth = Math.min(3, 1.4 + Math.min(hit, 5) * 0.25)
@@ -73,6 +83,8 @@ export function ForceGraphView({
         label: {
           ...(n.label ?? {}),
           opacity: focused ? (dimUnhit ? 0.55 : 1) : 0.28,
+          color: red ? 'rgba(185, 28, 28, 0.98)' : (n.label?.color ?? undefined),
+          fontWeight: red ? 700 : (n.label?.fontWeight ?? undefined),
         },
       }
     })
@@ -146,7 +158,8 @@ export function ForceGraphView({
         series: [
           {
             type: 'graph',
-            layout: 'force',
+            // When stableMode is on, freeze layout (no force simulation).
+            layout: stableMode ? 'circular' : 'force',
             roam: true,
             draggable: true,
             focusNodeAdjacency: true,
@@ -155,14 +168,21 @@ export function ForceGraphView({
             data: nodes2,
             links: links2,
             categories,
-            force: {
-              initLayout: 'circular',
-              repulsion: stableMode ? 130 : 180,
-              edgeLength: [40, 160],
-              gravity: stableMode ? 0.11 : 0.06,
-              friction: stableMode ? 0.88 : 0.78,
-              layoutAnimation: false,
-            },
+            force: stableMode
+              ? undefined
+              : {
+                  initLayout: 'circular',
+                  repulsion: 180,
+                  edgeLength: [40, 160],
+                  gravity: 0.06,
+                  friction: 0.78,
+                  layoutAnimation: false,
+                },
+            circular: stableMode
+              ? {
+                  rotateLabel: false,
+                }
+              : undefined,
             label: {
               show: true,
               color: '#111827',

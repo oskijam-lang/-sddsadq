@@ -28,7 +28,6 @@ export type PrimitiveAxis =
   | '对称与估计'
 
 export type ViewMode =
-  | 'RADIAL_TREE'
   | 'RADIAL_LINKS'
   | 'CHORD'
   | 'FORCE'

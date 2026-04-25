@@ -4,6 +4,7 @@ import type { TopicEdge, TopicNode } from '../../domain/types'
 import { emptyGraphFocus, isGraphFocusActive, topicTier, type GraphFocusTiers } from '../../domain/graphFocus'
 import { PRIMITIVE_AXES, primaryAxis } from '../../domain/firstPrinciples'
 import { usePanZoomRotate } from '../../viz/usePanZoomRotate'
+import type { TopicQuestionIndex } from '../../domain/paperAnalysis'
 
 type Props = {
   /** primitive：按第一性原理元轴聚类；chapter：按教材章节 */
@@ -15,8 +16,12 @@ type Props = {
   graphFocus?: GraphFocusTiers
   /** 真题覆盖：topicId -> count（用于小点标记） */
   paperCounts?: Record<string, number>
+  topicQuestions?: TopicQuestionIndex
+  /** 红色重点命中：考点 id 集合 */
+  redFocusIds?: Set<string>
   onSelectEdge?: (edge: TopicEdge) => void
   onSelectNode?: (id: string) => void
+  onHoverNode?: (id: string | null, pos?: { x: number; y: number }) => void
 }
 
 function buildHierarchy(chapters: string[], nodes: TopicNode[]) {
@@ -83,8 +88,11 @@ export function RadialLinksView({
   rotDeg = 0,
   graphFocus = emptyGraphFocus(),
   paperCounts = {},
+  topicQuestions = {},
+  redFocusIds,
   onSelectEdge,
   onSelectNode,
+  onHoverNode,
 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -230,6 +238,7 @@ export function RadialLinksView({
               if (!node) return null
               const kind = node.data.kind
               const isTopic = kind === 'TOPIC'
+              const isRed = isTopic && (redFocusIds?.has(id) ?? false)
               const r = isTopic ? 3.2 : kind === 'CH' ? 4.2 : 5.2
               const ti = isTopic ? topicTier(id, graphFocus) : 0
               const gAct = gActive
@@ -256,14 +265,42 @@ export function RadialLinksView({
               const tOp =
                 baseOp * (examCov && isTopic && (paperCounts[id] ?? 0) === 0 ? 0.48 : 1)
               return (
-                <g key={id}>
+                <g
+                  key={id}
+                  onMouseEnter={(ev) => {
+                    if (!isTopic) return
+                    onHoverNode?.(id, { x: ev.clientX, y: ev.clientY })
+                  }}
+                  onMouseMove={(ev) => {
+                    if (!isTopic) return
+                    onHoverNode?.(id, { x: ev.clientX, y: ev.clientY })
+                  }}
+                  onMouseLeave={() => {
+                    if (!isTopic) return
+                    onHoverNode?.(null)
+                  }}
+                >
                   <circle
                     cx={p.x}
                     cy={p.y}
                     r={r + (isTopic ? 1 : 0) + (gAct && isTopic && ti > 0 ? 1.2 : 0)}
                     fill={fill}
-                    stroke={exam > 0 ? 'rgba(6, 182, 212, 0.98)' : 'rgba(15, 23, 42, 0.12)'}
-                    strokeWidth={exam > 0 ? Math.min(3.2, 1.2 + Math.min(exam, 5) * 0.35) : kind === 'TOPIC' ? 0.9 : 1.1}
+                    stroke={
+                      isRed
+                        ? 'rgba(239, 68, 68, 0.95)'
+                        : exam > 0
+                          ? 'rgba(6, 182, 212, 0.98)'
+                          : 'rgba(15, 23, 42, 0.12)'
+                    }
+                    strokeWidth={
+                      isRed
+                        ? 2.6
+                        : exam > 0
+                          ? Math.min(3.2, 1.2 + Math.min(exam, 5) * 0.35)
+                          : kind === 'TOPIC'
+                            ? 0.9
+                            : 1.1
+                    }
                     opacity={tOp}
                     style={{ cursor: isTopic ? 'pointer' : 'default' }}
                     onClick={() => {
@@ -287,6 +324,23 @@ export function RadialLinksView({
                       <title>{`真题命中 ×${exam}（点击查看题目）`}</title>
                     </circle>
                   )}
+                  {isTopic && (topicQuestions[id]?.length ?? 0) > 0 && (
+                    <g transform={`translate(${p.x + 10},${p.y - 12})`} style={{ pointerEvents: 'none' }}>
+                      <rect
+                        x={0}
+                        y={0}
+                        width={topicQuestions[id]!.length >= 10 ? 22 : 18}
+                        height={14}
+                        rx={7}
+                        fill="rgba(13, 148, 136, 0.92)"
+                        stroke="rgba(0,0,0,0.25)"
+                        strokeWidth={0.6}
+                      />
+                      <text x={topicQuestions[id]!.length >= 10 ? 11 : 9} y={10} textAnchor="middle" style={{ fill: 'white', fontSize: 10, fontWeight: 700 }}>
+                        {topicQuestions[id]!.length >= 99 ? '99+' : String(topicQuestions[id]!.length)}
+                      </text>
+                    </g>
+                  )}
                   <text
                     x={tx}
                     y={ty}
@@ -296,11 +350,13 @@ export function RadialLinksView({
                       fill:
                         examCov && isTopic && (paperCounts[id] ?? 0) === 0
                           ? 'rgba(15, 23, 42, 0.4)'
+                          : isRed
+                            ? 'rgba(185, 28, 28, 0.98)'
                           : isTopic
                             ? '#0f172a'
                             : '#1e293b',
                       fontSize: isTopic ? 12 : 13,
-                      fontWeight: isTopic ? 500 : 600,
+                      fontWeight: isRed ? 750 : isTopic ? 500 : 600,
                     }}
                   >
                     {label}
@@ -312,7 +368,21 @@ export function RadialLinksView({
         </>
       ),
     }
-  }, [chapters, edges, graphFocus, layoutMode, nodes, onSelectEdge, onSelectNode, paperCounts, size.h, size.w])
+  }, [
+    chapters,
+    edges,
+    graphFocus,
+    layoutMode,
+    nodes,
+    onSelectEdge,
+    onSelectNode,
+    onHoverNode,
+    paperCounts,
+    redFocusIds,
+    size.h,
+    size.w,
+    topicQuestions,
+  ])
 
   return (
     <div ref={hostRef} style={{ width: '100%', height: '100%', position: 'relative' }}>

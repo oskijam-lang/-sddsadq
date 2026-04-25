@@ -23,7 +23,6 @@ type Props = {
 }
 
 const modeLabel: Record<ViewMode, string> = {
-  RADIAL_TREE: '径向树',
   RADIAL_LINKS: '径向+连线',
   CHORD: '弦图',
   FORCE: '力导向',
