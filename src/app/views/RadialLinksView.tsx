@@ -262,8 +262,8 @@ export function RadialLinksView({
                     cy={p.y}
                     r={r + (isTopic ? 1 : 0) + (gAct && isTopic && ti > 0 ? 1.2 : 0)}
                     fill={fill}
-                    stroke="rgba(15, 23, 42, 0.12)"
-                    strokeWidth={kind === 'TOPIC' ? 0.9 : 1.1}
+                    stroke={exam > 0 ? 'rgba(6, 182, 212, 0.98)' : 'rgba(15, 23, 42, 0.12)'}
+                    strokeWidth={exam > 0 ? Math.min(3.2, 1.2 + Math.min(exam, 5) * 0.35) : kind === 'TOPIC' ? 0.9 : 1.1}
                     opacity={tOp}
                     style={{ cursor: isTopic ? 'pointer' : 'default' }}
                     onClick={() => {
